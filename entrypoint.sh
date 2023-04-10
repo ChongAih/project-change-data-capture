@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Docker configuration
+export KAFKA_INTERNAL_SERVER="kafka:9092"
+export KAFKA_BOOTSTRAP_SERVER="localhost:29092"
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 command="$1"

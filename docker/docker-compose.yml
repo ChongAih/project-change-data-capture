@@ -32,32 +32,81 @@ services:
       timeout: 5s
       retries: 3
 
+#  zookeeper:
+#    container_name: zookeeper
+#    hostname: zookeeper
+#    image: quay.io/debezium/zookeeper:2.1
+#    restart: always
+#    ports:
+#      - "2181:2181"
+#      - "2888:2888"
+#      - "3888:3888"
+#    networks:
+#      - cdc
+
   zookeeper:
     container_name: zookeeper
     hostname: zookeeper
-    image: quay.io/debezium/zookeeper:2.1
+    image: confluentinc/cp-zookeeper:5.1.1
+    init: true
     restart: always
     ports:
       - "2181:2181"
       - "2888:2888"
       - "3888:3888"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     networks:
       - cdc
+
+#  kafka:
+#    container_name: kafka
+#    hostname: kafka
+#    image: quay.io/debezium/kafka:2.1
+#    restart: always
+#    ports:
+#      - "9092:9092"
+#    # https://stackoverflow.com/questions/73748215/kafka-cannot-connect-to-zookeeper-connection-refused
+#    environment:
+#      - ZOOKEEPER_CONNECT=zookeeper:2181
+#    networks:
+#      - cdc
+#    depends_on:
+#      - zookeeper
 
   kafka:
     container_name: kafka
     hostname: kafka
-    image: quay.io/debezium/kafka:2.1
+    image: confluentinc/cp-enterprise-kafka:6.2.7
     restart: always
-    ports:
-      - "9092:9092"
-    # https://stackoverflow.com/questions/73748215/kafka-cannot-connect-to-zookeeper-connection-refused
-    environment:
-      - ZOOKEEPER_CONNECT=zookeeper:2181
-    networks:
-      - cdc
+    init: true
     depends_on:
       - zookeeper
+    ports:
+      - "29092:29092"
+    volumes:
+      - $PWD/docker/kafka/data:/var/lib/kafka/data/ # for ease of data inspection
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # variable substitution to allow quick sync of configuration and setting
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_INTERNAL_SERVER},PLAINTEXT_HOST://${KAFKA_BOOTSTRAP_SERVER}
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1 # since we have only 1 broker to allow successful write of Flink
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_HOURS: 720
+      KAFKA_TRANSACTIONAL_ID_EXPIRATION_MS: 2073600000
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: ${KAFKA_INTERNAL_SERVER}
+      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - cdc
 
   connect:
     container_name: connect
@@ -69,7 +118,7 @@ services:
       - CONFIG_STORAGE_TOPIC=my_connect_configs
       - OFFSET_STORAGE_TOPIC=my_connect_offsets
       - STATUS_STORAGE_TOPIC=my_connect_stases
-      - BOOTSTRAP_SERVERS=kafka:9092
+      - BOOTSTRAP_SERVERS=${KAFKA_INTERNAL_SERVER}
     # The OFFSET_STORAGE_TOPIC configuration in Debezium is used to specify the name of the Kafka topic where the
     # connector stores its offsets, allowing it to resume from where it left off if it is restarted. However, if you are
     # using the Debezium Connect image in a Docker container, this configuration may not work as expected.

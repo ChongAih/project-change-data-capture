@@ -26,7 +26,7 @@ register connector - note the user and password
 
 ## Check Debezium Kafka Content
 check kafka topic content after the data update - {topic.prefix}.{db}.{table}
-    docker container exec -it kafka bash -c "bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic dbserver1.auth.users"
+    docker container exec -it kafka bash -c "kafka-console-consumer --bootstrap-server kafka:9092 --topic dbserver1.auth.users"
 
 docker container exec -it mysql bash -c "mysql -uroot -ppassword -e 'use auth; select * from users'"
 
@@ -61,6 +61,6 @@ delete data
 docker container kill connect
 sh entrypoint.sh start
 curl -H "Accept:application/json" localhost:8083/connectors/
-docker container exec -it kafka bash -c "bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic dbserver1.auth.users" --> it should not print anything
+docker container exec -it kafka bash -c "kafka-console-consumer --bootstrap-server kafka:9092 --topic dbserver1.auth.users" --> it should not print anything
 
 
