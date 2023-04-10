@@ -1,0 +1,94 @@
+version: '3.3'
+
+# Debezium tutorial
+# https://debezium.io/documentation/reference/stable/tutorial.html#starting-kafka-connect
+services:
+  mysql:
+    container_name: mysql
+    hostname: mysql
+    # mysqlbinlog to read the binlog
+    image: mysql:8.0.30-debian # https://stackoverflow.com/questions/73288860/can-not-find-mysqlbinlog-command-in-docker
+    environment:
+      MYSQL_DATABASE: data
+      MYSQL_ROOT_PASSWORD: password
+    restart: always #unless-stopped
+    command:
+      - '--datadir=/var/lib/mysql'
+      - '--log-bin=/var/lib/mysql/mysql-bin.log' # enable by default
+      # - '--skip-log-bin' # disable binary log
+    volumes:
+      - db:/var/lib/mysql
+      # create table during startup
+      - ./sql/create.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - cdc
+    # https://stackoverflow.com/questions/31746182/docker-compose-wait-for-container-x-before-starting-y
+    # Do healthcheck to ensure sql is ready
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  zookeeper:
+    container_name: zookeeper
+    hostname: zookeeper
+    image: quay.io/debezium/zookeeper:2.1
+    restart: always
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+    networks:
+      - cdc
+
+  kafka:
+    container_name: kafka
+    hostname: kafka
+    image: quay.io/debezium/kafka:2.1
+    restart: always
+    ports:
+      - "9092:9092"
+    # https://stackoverflow.com/questions/73748215/kafka-cannot-connect-to-zookeeper-connection-refused
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+    networks:
+      - cdc
+    depends_on:
+      - zookeeper
+
+  connect:
+    container_name: connect
+    hostname: connect
+    image: 'quay.io/debezium/connect:2.1'
+    restart: always
+    environment:
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=my_connect_configs
+      - OFFSET_STORAGE_TOPIC=my_connect_offsets
+      - STATUS_STORAGE_TOPIC=my_connect_stases
+      - BOOTSTRAP_SERVERS=kafka:9092
+    # The OFFSET_STORAGE_TOPIC configuration in Debezium is used to specify the name of the Kafka topic where the
+    # connector stores its offsets, allowing it to resume from where it left off if it is restarted. However, if you are
+    # using the Debezium Connect image in a Docker container, this configuration may not work as expected.
+    # This is because the OFFSET_STORAGE_TOPIC configuration is typically set in the Debezium Connect configuration file,
+    # which is mounted as a volume in the container. When the container is restarted, the configuration file is not
+    # reloaded, so the new value for OFFSET_STORAGE_TOPIC is not picked up. --> so need to have volume to store the config
+    volumes:
+      - ${PWD}/docker/connect_config:/kafka/config
+    ports:
+      - '8083:8083'
+    networks:
+      - cdc
+    depends_on:
+      - kafka
+      - mysql
+
+networks:
+  cdc:
+    driver: bridge
+
+volumes:
+  db:

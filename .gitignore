@@ -1,0 +1,5 @@
+.idea
+target
+src/main/resources/logs
+*.iml
+docker/connect_config
