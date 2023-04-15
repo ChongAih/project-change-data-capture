@@ -1,8 +1,14 @@
 #!/bin/sh
 
-# Docker configuration
-export KAFKA_INTERNAL_SERVER="kafka:9092"
-export KAFKA_BOOTSTRAP_SERVER="localhost:29092"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# Read Docker config and export for docker-compose usage
+. "$SCRIPT_DIR"/docker/docker.env
+
+export KAFKA_INTERNAL_SERVER
+export KAFKA_BOOTSTRAP_SERVER
+export KAFKA_DATA_LOCAL_PATH
+export DEBEZIUM_CONFIG_LOCAL_PATH
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
@@ -19,6 +25,13 @@ elif [ "$command" = "stop" ]; then
   echo && echo "================== DOCKER COMPOSING DOWN =================" && echo
 
   docker-compose -f "$SCRIPT_DIR"/docker/docker-compose.yml down -v
+
+  echo && echo "========================= CLEANING =======================" && echo
+
+  # Clear volume bin mount directory
+  if [ -d "$KAFKA_DATA_LOCAL_PATH" ]; then rm -Rf "$KAFKA_DATA_LOCAL_PATH"; fi
+  if [ -d "$DEBEZIUM_CONFIG_LOCAL_PATH" ]; then rm -Rf "$DEBEZIUM_CONFIG_LOCAL_PATH"; fi
+  docker volume prune -f
 
 else
 

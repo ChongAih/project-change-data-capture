@@ -10,7 +10,9 @@
     <maven.compiler.source>8</maven.compiler.source>
     <maven.compiler.target>8</maven.compiler.target>
     <encoding>UTF-8</encoding>
-    <scala.version>2.11.12</scala.version>
+    <scala.version>2.12.4</scala.version>
+    <scala.binary.version>2.12</scala.binary.version>
+    <spark.version>3.1.2</spark.version>
     <java.version>1.8</java.version>
   </properties>
 
@@ -37,8 +39,8 @@
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.11</artifactId>
-      <version>3.0.8</version>
+      <artifactId>scalatest_${scala.binary.version}</artifactId>
+      <version>3.0.1</version>
       <scope>test</scope>
     </dependency>
     <!-- Typesafe configuration reader -->
@@ -50,7 +52,7 @@
     <!-- Argument parser -->
     <dependency>
       <groupId>org.rogach</groupId>
-      <artifactId>scallop_2.11</artifactId>
+      <artifactId>scallop_${scala.binary.version}</artifactId>
       <version>3.1.2</version>
     </dependency>
     <!-- JSON parser -->
@@ -64,6 +66,38 @@
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <version>1.2.17</version>
+    </dependency>
+    <!-- Spark structured streaming -->
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hive_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql-kafka-0-10_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka_${scala.binary.version}</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <!-- Hudi -->
+    <dependency>
+      <groupId>org.apache.hudi</groupId>
+      <artifactId>hudi-spark3.1-bundle_${scala.binary.version}</artifactId>
+      <version>0.13.0</version>
     </dependency>
   </dependencies>
 

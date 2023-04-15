@@ -1,49 +1,32 @@
 version: '3.3'
 
-# Debezium tutorial
-# https://debezium.io/documentation/reference/stable/tutorial.html#starting-kafka-connect
 services:
+  # RDBMS for binlog
   mysql:
     container_name: mysql
     hostname: mysql
-    # mysqlbinlog to read the binlog
-    image: mysql:8.0.30-debian # https://stackoverflow.com/questions/73288860/can-not-find-mysqlbinlog-command-in-docker
+    image: mysql:8.0.30-debian # mysqlbinlog to read the binlog - https://stackoverflow.com/questions/73288860/can-not-find-mysqlbinlog-command-in-docker
     environment:
       MYSQL_DATABASE: data
       MYSQL_ROOT_PASSWORD: password
     restart: always #unless-stopped
     command:
       - '--datadir=/var/lib/mysql'
-      - '--log-bin=/var/lib/mysql/mysql-bin.log' # enable by default
-      # - '--skip-log-bin' # disable binary log
+      - '--log-bin=/var/lib/mysql/mysql-bin.log' # enable by default, '--skip-log-bin' to disable binary log
     volumes:
       - db:/var/lib/mysql
-      # create table during startup
-      - ./sql/create.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/create.sql:/docker-entrypoint-initdb.d/init.sql # create table during startup
     ports:
       - "3306:3306"
     networks:
       - cdc
-    # https://stackoverflow.com/questions/31746182/docker-compose-wait-for-container-x-before-starting-y
-    # Do healthcheck to ensure sql is ready
-    healthcheck:
+    healthcheck: # Do healthcheck to ensure sql is ready - https://stackoverflow.com/questions/31746182/docker-compose-wait-for-container-x-before-starting-y
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       interval: 10s
       timeout: 5s
       retries: 3
 
-#  zookeeper:
-#    container_name: zookeeper
-#    hostname: zookeeper
-#    image: quay.io/debezium/zookeeper:2.1
-#    restart: always
-#    ports:
-#      - "2181:2181"
-#      - "2888:2888"
-#      - "3888:3888"
-#    networks:
-#      - cdc
-
+  # Kafka zookeeper for debezium binlog ingestion
   zookeeper:
     container_name: zookeeper
     hostname: zookeeper
@@ -60,33 +43,17 @@ services:
     networks:
       - cdc
 
-#  kafka:
-#    container_name: kafka
-#    hostname: kafka
-#    image: quay.io/debezium/kafka:2.1
-#    restart: always
-#    ports:
-#      - "9092:9092"
-#    # https://stackoverflow.com/questions/73748215/kafka-cannot-connect-to-zookeeper-connection-refused
-#    environment:
-#      - ZOOKEEPER_CONNECT=zookeeper:2181
-#    networks:
-#      - cdc
-#    depends_on:
-#      - zookeeper
-
+  # Kafka cluster for debezium binlog ingestion
   kafka:
     container_name: kafka
     hostname: kafka
     image: confluentinc/cp-enterprise-kafka:6.2.7
     restart: always
     init: true
-    depends_on:
-      - zookeeper
     ports:
       - "29092:29092"
     volumes:
-      - $PWD/docker/kafka/data:/var/lib/kafka/data/ # for ease of data inspection
+      - ${KAFKA_DATA_LOCAL_PATH}:/var/lib/kafka/data/ # for ease of data inspection
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -107,7 +74,10 @@ services:
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
     networks:
       - cdc
+    depends_on:
+      - zookeeper
 
+  # Debezium tool to ingest RDBMS binlog
   connect:
     container_name: connect
     hostname: connect
@@ -126,7 +96,7 @@ services:
     # which is mounted as a volume in the container. When the container is restarted, the configuration file is not
     # reloaded, so the new value for OFFSET_STORAGE_TOPIC is not picked up. --> so need to have volume to store the config
     volumes:
-      - ${PWD}/docker/connect_config:/kafka/config
+      - ${DEBEZIUM_CONFIG_LOCAL_PATH}:/kafka/config
     ports:
       - '8083:8083'
     networks:
@@ -135,9 +105,117 @@ services:
       - kafka
       - mysql
 
+  # HDFS namenode
+  namenode:
+    image: apachehudi/hudi-hadoop_2.8.4-namenode:latest
+    hostname: namenode
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=hudi_hadoop284_hive232_spark244
+    ports:
+      - "50070:50070" # localhost:50070 to view file
+      - "8020:8020"
+      - "5005" # JVM debugging port (will be mapped to a random port on host)
+    env_file:
+      - ./docker.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://namenode:50070"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cdc
+
+  # HDFS datanode
+  datanode1:
+    image: apachehudi/hudi-hadoop_2.8.4-datanode:latest
+    container_name: datanode1
+    hostname: datanode1
+    environment:
+      - CLUSTER_NAME=hudi_hadoop284_hive232_spark244
+    env_file:
+      - ./docker.env
+    ports:
+      - "50075:50075"
+      - "50010:50010"
+      - "5005" # JVM debugging port (will be mapped to a random port on host)
+    links:
+      - "namenode"
+      - "historyserver"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://datanode1:50075"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - namenode
+    networks:
+      - cdc
+
+  # HDFS history server to check completed job
+  historyserver:
+    image: apachehudi/hudi-hadoop_2.8.4-history:latest
+    hostname: historyserver
+    container_name: historyserver
+    environment:
+      - CLUSTER_NAME=hudi_hadoop284_hive232_spark244
+    depends_on:
+      - "namenode"
+    links:
+      - "namenode"
+    ports:
+      - "58188:8188" # localhost:58188 to view job history
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://historyserver:8188"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    env_file:
+      - ./docker.env
+    networks:
+      - cdc
+
+  # Postgresql to store Hive metadata
+  hive-metastore-postgresql:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    volumes:
+      - hive-metastore-postgresql:/var/lib/postgresql
+    hostname: hive-metastore-postgresql
+    container_name: hive-metastore-postgresql
+    networks:
+      - cdc
+
+  # Hive metastore
+  hivemetastore:
+    image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3:latest
+    hostname: hivemetastore
+    container_name: hivemetastore
+    links:
+      - "hive-metastore-postgresql"
+      - "namenode"
+    env_file:
+      - ./docker.env  # username, password, connection url stored in hadopp env
+    command: /opt/hive/bin/hive --service metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070 hive-metastore-postgresql:5432"
+    ports:
+      - "9083:9083"
+      - "5005" # JVM debugging port (will be mapped to a random port on host)
+    healthcheck:
+      test: ["CMD", "nc", "-z", "hivemetastore", "9083"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - "hive-metastore-postgresql"
+      - "namenode"
+    networks:
+      - cdc
+
 networks:
   cdc:
     driver: bridge
 
 volumes:
   db:
+  hive-metastore-postgresql:

@@ -1,6 +1,5 @@
 package org.example.task
 
-import com.sun.deploy.net.HttpResponse
 import com.typesafe.config.Config
 import org.apache.log4j.Logger
 import org.example.util.{ConfigReader, Const}
