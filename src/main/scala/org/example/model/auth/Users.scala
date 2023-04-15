@@ -1,4 +1,4 @@
-package org.example.model.project.auth
+package org.example.model.auth
 
 // Case class by default extends scala.Product to conform with Spark Encoder requirements
 case class Users(

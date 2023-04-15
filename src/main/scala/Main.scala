@@ -1,5 +1,5 @@
 import org.apache.log4j.Logger
-import org.example.model.project.auth.Users
+import org.example.model.auth.Users
 import org.example.task.{ConnectorCreator, IngestionTaskCreator}
 import org.example.util.{ArgumentParser, ConfigReader, Const}
 
