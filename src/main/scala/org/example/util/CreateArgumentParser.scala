@@ -2,9 +2,8 @@ package org.example.util
 
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
-class ArgumentParser(args: Array[String]) extends ScallopConf(args) {
+class CreateArgumentParser(args: Array[String]) extends ScallopConf(args) {
 
-  val task: ScallopOption[String] = opt[String]("task", required = true, descr = "task to be executed")
   val configPath: ScallopOption[String] = opt[String]("config-path", required = true,
     descr = "path to the configuration entailing all the configuration")
   val kafkaStartTime: ScallopOption[String] = opt[String]("kafka-start-time", required = false,
@@ -13,7 +12,7 @@ class ArgumentParser(args: Array[String]) extends ScallopConf(args) {
     descr = "end time to consume the Kafka topic", default = Some("-1"))
   val local: ScallopOption[Boolean] = opt[Boolean]("local", required = false,
     descr = "Spark job running locally or cluster", default = Some(false))
-  val hudi: ScallopOption[Boolean] = opt[Boolean]("hudi", required = false,
+  val writeToHudi: ScallopOption[Boolean] = opt[Boolean]("write-to-hudi", required = false,
     descr = "Write data to Hudi or console", default = Some(false))
 
   verify()
