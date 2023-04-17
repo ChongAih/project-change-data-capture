@@ -36,10 +36,13 @@ object Const {
   val CONFIG_HUDI_KAFKA_COMMON_SECURITY_PROTOCOL = "hudi.kafka.common.security_protocol"
   val CONFIG_HUDI_KAFKA_COMMON_SASL_MECHANISM = "hudi.kafka.common.sasl_mechanism"
   val CONFIG_HUDI_KAFKA_TRIGGER_INTERVAL = "hudi.kafka.trigger_interval"
+  val CONFIG_HUDI_PATH = "hudi.config.path"
 
   val KAFKA_DEFAULT_LATEST_OFFSET = "-1"
   val SPARK_LOCAL_MASTER = false
   val SPARK_WRITE_TO_HUDI = false
+  val SPARK_HUDI_READ_INCREMENTAL = false
+  val SPARK_HUDI_BEGIN_INSTANT_TIME = "19700101000000"
   val HTTP_CONNECTOR_CREATE = "http.connect.create"
   val KAFKA_VALUE_NAME = "value"
   val KAFKA_TIMESTAMP_NAME = "timestamp"
