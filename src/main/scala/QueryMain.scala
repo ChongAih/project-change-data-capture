@@ -18,7 +18,7 @@ object QueryMain extends QueryRunner {
       "--config-path", "config/auth/users.conf",
       "--local",
       "--incremental",
-      "--begin-instant-time", "20230416000000"
+      "--begin-instant-time", "20230417111000"
     ))
   }
 }
