@@ -126,7 +126,7 @@ object IngestionTaskCreator {
   }
 
   private def postDataFrameToHudi(dstDF: DataFrame, config: Config): Unit = {
-    // Get configuration
+    // Get configuration & note the checkpointLocation
     val triggerInterval = ConfigReader.getConfigField[String](config, Const.CONFIG_HUDI_KAFKA_TRIGGER_INTERVAL)
     val hudiConfig = config.getConfig("hudi.config")
     val sparkOptions: java.util.Map[String, String] = new java.util.HashMap()
