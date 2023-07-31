@@ -57,16 +57,24 @@ volume to store the config.
 
 ## 2. Create Debezium Connector and Ingestion Job 
 
-Package the jar and run the following command to create debezium connector and ingestion job:
+Run the class `CreateMain` directly from IDE with the arguments updated to create debezium connector and ingestion job:
 ```
-mvn clean package
+// For COW
+run(Array(
+  "--config-path", "config/auth/users.conf",
+  "--kafka-start-time", "-2",
+  "--kafka-end-time", "-1",
+  "--local", "--write-to-hudi"
+))
 
-// remove --write-to-hudi if want to print to console
-java -jar target/change-data-capture-1.0-SNAPSHOT.jar CreateMain --config-path config/auth/users.conf \
-    --kafka-start-time -2 --kafka-end-time -1 --local --write-to-hudi
+// For MOR
+run(Array(
+  "--config-path", "config/auth/users_mor.conf",
+  "--kafka-start-time", "-2",
+  "--kafka-end-time", "-1",
+  "--local", "--write-to-hudi"
+))
 ```
-
-Alternatively, can run directly from the IDE.
 
 The job will set up a Debezium connector based on the template ('template/connector.json') and the given config. It does 
 the same thing as the curl command:
@@ -118,6 +126,12 @@ There are few Hudi configuration being set ([all Hudi configurations](https://hu
 
 It should also be noted that a column '_hoodie_is_deleted' is added to indicate if the data should be removed during 
 compaction. 
+
+For COW, each commit creates a new parquet file. If the number committed file is larger than "hoodie.keep.max.commits", 
+a cleaning process will be performed and keep the latest committed up to "hoodie.keep.min.commits".
+
+For MOR, commit of insert will create a new parquet file while any other changes will create a log under the same HUDI
+path which will be merged into the parquet file when issue incremental or snapshot query.
 
 ## 3. Check Debezium and Hudi Operation
 * Check MySQL data
@@ -180,19 +194,38 @@ parquet-tools show <path to hudi parquet file>.parquet
 ```
 
 ## 4. Query
-Package the jar and run the following command to create debezium connector and ingestion job:
+Run the class `QueryMain` directly from IDE with the arguments updated:
 ```
-mvn clean package
+// COW
+// Snapshot query
+run(Array(
+  "--config-path", "config/auth/users.conf",
+  "--local"
+))
 
-// snapshot query
-java -jar target/change-data-capture-1.0-SNAPSHOT.jar QueryMain --config-path config/auth/users.conf --local
+// Incremental query
+run(Array(
+  "--config-path", "config/auth/users.conf",
+  "--local",
+  "--incremental",
+  "--begin-instant-time", "20230731113000"
+))
 
-// incremental query
-java -jar target/change-data-capture-1.0-SNAPSHOT.jar QueryMain --config-path config/auth/users.conf --local \
-    --incremental --begin-instant-time 20230417111000"
+// MOR
+// Snapshot query
+run(Array(
+  "--config-path", "config/auth/users_mor.conf",
+  "--local"
+))
+
+// Incremental query
+run(Array(
+  "--config-path", "config/auth/users_mor.conf",
+  "--local",
+  "--incremental",
+  "--begin-instant-time", "20230731133820"
+))
 ```
-
-Alternatively, can run directly from the IDE.
 
 The job can run two queries:
 * Incremental - contains only part of the updated data from the begin-instant-time (committed time of the files)

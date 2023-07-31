@@ -6,8 +6,15 @@ import org.example.util.{CreateArgumentParser, ConfigReader, Const}
 object CreateMain extends CreateRunner {
   def main(args: Array[String]): Unit = {
     //    run(args)
+//    run(Array(
+//      "--config-path", "config/auth/users.conf",
+//      "--kafka-start-time", "-2",
+//      "--kafka-end-time", "-1",
+//      "--local", "--write-to-hudi"
+//    ))
+
     run(Array(
-      "--config-path", "config/auth/users.conf",
+      "--config-path", "config/auth/users_mor.conf",
       "--kafka-start-time", "-2",
       "--kafka-end-time", "-1",
       "--local", "--write-to-hudi"

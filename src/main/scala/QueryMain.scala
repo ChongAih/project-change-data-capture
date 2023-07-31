@@ -7,18 +7,32 @@ object QueryMain extends QueryRunner {
   def main(args: Array[String]): Unit = {
     //    run(args)
 
+//    // Snapshot query
+//    run(Array(
+//      "--config-path", "config/auth/users.conf",
+//      "--local"
+//    ))
+//
+//    // Incremental query
+//    run(Array(
+//      "--config-path", "config/auth/users.conf",
+//      "--local",
+//      "--incremental",
+//      "--begin-instant-time", "20230731113000"
+//    ))
+
     // Snapshot query
     run(Array(
-      "--config-path", "config/auth/users.conf",
+      "--config-path", "config/auth/users_mor.conf",
       "--local"
     ))
 
     // Incremental query
     run(Array(
-      "--config-path", "config/auth/users.conf",
+      "--config-path", "config/auth/users_mor.conf",
       "--local",
       "--incremental",
-      "--begin-instant-time", "20230417111000"
+      "--begin-instant-time", "20230731133820"
     ))
   }
 }
@@ -64,14 +78,14 @@ trait QueryRunner {
           .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_INCREMENTAL_OPT_VAL)
           .option(DataSourceReadOptions.BEGIN_INSTANTTIME_OPT_KEY, beginInstantTime)
           .load(path)
-          .show()
+          .show(false)
       } else {
         // snapshot query - full updated data
         spark
           .read
           .format("hudi")
           .load(path)
-          .show()
+          .show(false)
       }
     } catch {
       case e: Exception =>
