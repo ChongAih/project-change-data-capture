@@ -3,6 +3,7 @@ version: '3.3'
 services:
   # RDBMS for binlog
   mysql:
+    platform: linux/amd64
     container_name: mysql
     hostname: mysql
     image: mysql:8.0.30-debian # mysqlbinlog to read the binlog - https://stackoverflow.com/questions/73288860/can-not-find-mysqlbinlog-command-in-docker
@@ -28,6 +29,7 @@ services:
 
   # Kafka zookeeper for debezium binlog ingestion
   zookeeper:
+    platform: linux/amd64
     container_name: zookeeper
     hostname: zookeeper
     image: confluentinc/cp-zookeeper:5.1.1
@@ -45,6 +47,7 @@ services:
 
   # Kafka cluster for debezium binlog ingestion
   kafka:
+    platform: linux/amd64
     container_name: kafka
     hostname: kafka
     image: confluentinc/cp-enterprise-kafka:6.2.7
@@ -107,6 +110,7 @@ services:
 
   # HDFS namenode
   namenode:
+    platform: linux/amd64
     image: apachehudi/hudi-hadoop_2.8.4-namenode:latest
     hostname: namenode
     container_name: namenode
@@ -128,6 +132,7 @@ services:
 
   # HDFS datanode
   datanode1:
+    platform: linux/amd64
     image: apachehudi/hudi-hadoop_2.8.4-datanode:latest
     container_name: datanode1
     hostname: datanode1
@@ -154,6 +159,7 @@ services:
 
   # HDFS history server to check completed job
   historyserver:
+    platform: linux/amd64
     image: apachehudi/hudi-hadoop_2.8.4-history:latest
     hostname: historyserver
     container_name: historyserver
@@ -177,6 +183,7 @@ services:
 
   # Postgresql to store Hive metadata
   hive-metastore-postgresql:
+    platform: linux/amd64
     image: bde2020/hive-metastore-postgresql:2.3.0
     volumes:
       - hive-metastore-postgresql:/var/lib/postgresql
@@ -187,6 +194,7 @@ services:
 
   # Hive metastore
   hivemetastore:
+    platform: linux/amd64
     image: apachehudi/hudi-hadoop_2.8.4-hive_2.3.3:latest
     hostname: hivemetastore
     container_name: hivemetastore
