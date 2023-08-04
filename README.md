@@ -193,6 +193,9 @@ pip3 install parquet-tools
 parquet-tools show <path to hudi parquet file>.parquet
 ```
 
+When insert a new data, a new parquet file will be created. When updating an existing data, only the file that contains 
+that row of data will be rewritten as a new parquet file, the remaining file remains unchanged.
+
 ## 4. Query
 Run the class `QueryMain` directly from IDE with the arguments updated:
 ```
