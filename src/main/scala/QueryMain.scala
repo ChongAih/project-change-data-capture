@@ -18,7 +18,15 @@ object QueryMain extends QueryRunner {
 //      "--config-path", "config/auth/users.conf",
 //      "--local",
 //      "--incremental",
-//      "--begin-instant-time", "20230731113000"
+//      "--begin-instant-time", "20230731223350"
+//    ))
+//
+//    // Time travel query - use the commitTime in .hoodie folder
+//    run(Array(
+//      "--config-path", "config/auth/users_mor.conf",
+//      "--local",
+//      "--time-travel",
+//      "--commit-time", "20230802091307840"
 //    ))
 
     // Snapshot query
@@ -32,7 +40,15 @@ object QueryMain extends QueryRunner {
       "--config-path", "config/auth/users_mor.conf",
       "--local",
       "--incremental",
-      "--begin-instant-time", "20230731133820"
+      "--begin-instant-time", "20230802092000000"
+    ))
+
+    // Time travel query - use the commitTime in .hoodie folder
+    run(Array(
+      "--config-path", "config/auth/users_mor.conf",
+      "--local",
+      "--time-travel",
+      "--commit-time", "20230802091307840"
     ))
   }
 }
@@ -53,6 +69,10 @@ trait QueryRunner {
       .getOrElse(Const.SPARK_HUDI_READ_INCREMENTAL)
     val beginInstantTime = argumentParser.beginInstantTime
       .getOrElse(Const.SPARK_HUDI_BEGIN_INSTANT_TIME)
+    val timeTravel = argumentParser.timeTravel
+      .getOrElse(Const.SPARK_HUDI_READ_TIME_TRAVEL)
+    val commitTime = argumentParser.commitTime
+      .getOrElse(Const.SPARK_HUDI_TIME_TRAVEL_COMMIT_TIME)
 
     logger.info(
       s"""User set parameters:
@@ -60,6 +80,8 @@ trait QueryRunner {
          |  * local: $local
          |  * incremental: $incremental
          |  * beginInstantTime: $beginInstantTime
+         |  * timeTravel: $timeTravel
+         |  * commitTime: $commitTime
          |""".stripMargin)
 
     // Read configuration
@@ -71,22 +93,35 @@ trait QueryRunner {
       spark = SparkHelper.getSparkSession(config, local, Const.SPARK_WRITE_TO_HUDI)
       val path = ConfigReader.getConfigField[String](config, Const.CONFIG_HUDI_PATH)
 
-      if (incremental) {
-        // Incremental - part of the updated data since begin-instant-time
+      if (timeTravel) {
+        logger.info("Issuing a snapshot time-travel query...")
         spark.read
           .format("org.apache.hudi")
-          .option(DataSourceReadOptions.QUERY_TYPE_OPT_KEY, DataSourceReadOptions.QUERY_TYPE_INCREMENTAL_OPT_VAL)
-          .option(DataSourceReadOptions.BEGIN_INSTANTTIME_OPT_KEY, beginInstantTime)
+          .option("as.of.instant", commitTime)
           .load(path)
           .show(false)
       } else {
-        // snapshot query - full updated data
-        spark
-          .read
-          .format("hudi")
-          .load(path)
-          .show(false)
+        if (incremental) {
+          logger.info("Issuing an incremental query...")
+          // Incremental - part of the updated data since begin-instant-time
+          spark.read
+            .format("org.apache.hudi")
+            .option("hoodie.datasource.query.type", DataSourceReadOptions.QUERY_TYPE_INCREMENTAL_OPT_VAL)
+            .option("hoodie.datasource.read.begin.instanttime", beginInstantTime)
+            .load(path)
+            .show(false)
+        } else {
+          logger.info("Issuing a snapshot query...")
+          // snapshot query - full updated data
+          spark
+            .read
+            .format("hudi")
+            .load(path)
+            .show(false)
+        }
       }
+
+
     } catch {
       case e: Exception =>
         logger.error(e)
