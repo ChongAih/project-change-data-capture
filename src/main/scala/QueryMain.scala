@@ -7,27 +7,27 @@ object QueryMain extends QueryRunner {
   def main(args: Array[String]): Unit = {
     //    run(args)
 
-//    // Snapshot query
-//    run(Array(
-//      "--config-path", "config/auth/users.conf",
-//      "--local"
-//    ))
-//
-//    // Incremental query
-//    run(Array(
-//      "--config-path", "config/auth/users.conf",
-//      "--local",
-//      "--incremental",
-//      "--begin-instant-time", "20230731223350"
-//    ))
-//
-//    // Time travel query - use the commitTime in .hoodie folder
-//    run(Array(
-//      "--config-path", "config/auth/users_mor.conf",
-//      "--local",
-//      "--time-travel",
-//      "--commit-time", "20230802091307840"
-//    ))
+    // Snapshot query
+    run(Array(
+      "--config-path", "config/auth/users.conf",
+      "--local"
+    ))
+
+    // Incremental query
+    run(Array(
+      "--config-path", "config/auth/users.conf",
+      "--local",
+      "--incremental",
+      "--begin-instant-time", "20230731223350"
+    ))
+
+    // Time travel query - use the commitTime in .hoodie folder
+    run(Array(
+      "--config-path", "config/auth/users.conf",
+      "--local",
+      "--time-travel",
+      "--commit-time", "20230731221704842"
+    ))
 
     // Snapshot query
     run(Array(
